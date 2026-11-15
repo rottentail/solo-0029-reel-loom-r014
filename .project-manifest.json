@@ -43,6 +43,11 @@
       "responsibility": "captions"
     },
     {
+      "id": "claims",
+      "path": "reel_loom/claims.py",
+      "responsibility": "claims"
+    },
+    {
       "id": "conformance",
       "path": "reel_loom/conformance.py",
       "responsibility": "conformance"
@@ -121,6 +126,11 @@
       "id": "timebase",
       "path": "reel_loom/timebase.py",
       "responsibility": "timebase"
+    },
+    {
+      "id": "worker",
+      "path": "reel_loom/worker.py",
+      "responsibility": "worker"
     }
   ],
   "workflows": [
@@ -439,6 +449,27 @@
         "api",
         "lineage",
         "tickets",
+        "database"
+      ]
+    },
+    {
+      "id": "remote-relay",
+      "name": "远端租约执行与失联接力",
+      "entry": "POST /workers/{id}/claims + POST /claims/{id}/result",
+      "success": "远端 worker 领取冻结快照编码，失联由其他 worker 接力，同一渲染单只承认一个成片",
+      "failure": "迟到或失约提交返回冲突且不改动既有结果",
+      "verification": ".venv/bin/python -m reel_loom.demo --workflow remote-relay",
+      "steps": [
+        "输入经公开入口到领域规则",
+        "跨媒体或持久化边界提交结果",
+        "回读结果并观察拒绝路径"
+      ],
+      "module_ids": [
+        "api",
+        "claims",
+        "tickets",
+        "artifacts",
+        "blobs",
         "database"
       ]
     }

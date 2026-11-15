@@ -10,6 +10,7 @@ from .processes import Processes
 from .tickets import Tickets
 from .artifacts import Artifacts
 from .rendering import Renderer
+from .claims import Claims
 from .analysis import AudioAnalysis
 from .frames import Frames
 from .imprints import Imprints
@@ -45,6 +46,7 @@ class Application:
             self.imprints = Imprints(self.db, self.blobs, self.tickets, self.captions)
             self.resources = Resources(self.db, self.blobs)
             self.recovery = self.tickets.recover()
+            self.claims = Claims(self.db, settings, self.tickets, self.blobs, self.artifacts)
             self.renderer = Renderer(settings, self.blobs, self.tickets, self.planner, self.processes, self.artifacts)
             if start_workers:
                 self.renderer.start()

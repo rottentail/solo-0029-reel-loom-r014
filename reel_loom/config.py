@@ -16,6 +16,7 @@ class Settings:
     workers: int = 1
     host: str = "127.0.0.1"
     port: int = 8729
+    lease_seconds: float = 15.0
 
     @classmethod
     def from_env(cls):
@@ -29,10 +30,12 @@ class Settings:
         root = Path(os.environ.get("LOOM_DATA", ".reel-loom")).resolve()
         workers = int(os.environ.get("LOOM_WORKERS", "1"))
         port = int(os.environ.get("LOOM_PORT", "8729"))
+        lease = float(os.environ.get("LOOM_LEASE_SECONDS", "15"))
         require(1 <= workers <= 4, "configuration", "LOOM_WORKERS must be 1..4")
         require(1024 <= port <= 65535, "configuration", "LOOM_PORT must be 1024..65535")
+        require(1 <= lease <= 300, "configuration", "LOOM_LEASE_SECONDS must be 1..300")
         return cls(root=root, ffmpeg=binary, workers=workers, port=port,
-                   host=os.environ.get("LOOM_HOST", "127.0.0.1"))
+                   host=os.environ.get("LOOM_HOST", "127.0.0.1"), lease_seconds=lease)
 
     def prepare(self):
         self.root.mkdir(parents=True, exist_ok=True)
@@ -45,4 +48,4 @@ class Settings:
     def public(self):
         return {"max_upload_bytes": self.max_upload, "max_duration_seconds": self.max_seconds,
                 "max_pixels": self.max_pixels, "workers": self.workers,
-                "render_timeout_seconds": self.render_timeout}
+                "render_timeout_seconds": self.render_timeout, "lease_seconds": self.lease_seconds}

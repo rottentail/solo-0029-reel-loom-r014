@@ -1,4 +1,4 @@
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_info(version INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS blobs(
@@ -33,10 +33,19 @@ CREATE TABLE IF NOT EXISTS tickets(
  state TEXT NOT NULL CHECK(state IN ('queued','running','succeeded','failed','cancelled')),
  attempt INTEGER NOT NULL, progress REAL NOT NULL DEFAULT 0,
  cancel INTEGER NOT NULL DEFAULT 0, error TEXT, created REAL NOT NULL, updated REAL NOT NULL,
+ lease_id TEXT, lease_holder TEXT, lease_expires REAL,
  FOREIGN KEY(reel,revision) REFERENCES revisions(reel,number),
  FOREIGN KEY(look_id,look_version) REFERENCES looks(id,version)
 );
 CREATE INDEX IF NOT EXISTS ticket_queue ON tickets(state,created,id);
+CREATE TABLE IF NOT EXISTS workers(
+ id TEXT PRIMARY KEY, label TEXT NOT NULL, created REAL NOT NULL, seen REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS claims(
+ id TEXT PRIMARY KEY, ticket TEXT NOT NULL REFERENCES tickets(id),
+ holder TEXT NOT NULL, created REAL NOT NULL, expires REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS claim_ticket ON claims(ticket);
 CREATE TABLE IF NOT EXISTS artifacts(
  id TEXT PRIMARY KEY, ticket TEXT REFERENCES tickets(id), asset TEXT REFERENCES assets(id),
  kind TEXT NOT NULL, blob TEXT NOT NULL REFERENCES blobs(hash),

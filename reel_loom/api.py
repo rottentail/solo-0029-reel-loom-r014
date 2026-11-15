@@ -31,9 +31,10 @@ class Api:
             return app.health()
         if method == "GET" and route == "/":
             return {"name": "声画织场", "api": self.prefix,
-                    "resources": ["assets", "reels", "looks", "tickets", "analyses", "artifacts", "imprints"],
+                    "resources": ["assets", "reels", "looks", "tickets", "workers", "analyses", "artifacts", "imprints"],
                     "time_units": "seconds at input; integer microseconds in frozen records",
                     "render_modes": ["video/h264+aac", "audio/pcm_s16le"],
+                    "execution": "in-process threads and leased remote workers; one winning commit per ticket",
                     "editing": "ordered hard cuts; immutable revisions",
                     "captions": "source SRT tracks projected to a reel revision"}
         if route == "/assets":
@@ -104,6 +105,25 @@ class Api:
                 return {"items": app.tickets.list(query.get("state"))}
             if method == "POST":
                 return app.tickets.enqueue(self.json_body(raw), headers.get("Idempotency-Key"))
+        if route == "/workers":
+            if method == "POST":
+                return app.claims.register(self.json_body(raw))
+            if method == "GET":
+                return {"items": app.claims.workers()}
+        match = re.fullmatch(r"/workers/([^/]+)(?:/claims)?", route)
+        if match:
+            if method == "GET" and not route.endswith("/claims"):
+                return app.claims.worker(match[1])
+            if method == "POST" and route.endswith("/claims"):
+                return app.claims.claim(match[1], self.json_body(raw))
+        match = re.fullmatch(r"/claims/([^/]+)/(heartbeat|result|fail)", route)
+        if match and method == "POST":
+            claim_id, action = match.groups()
+            if action == "result":
+                return app.claims.commit(claim_id, raw)
+            if action == "heartbeat":
+                return app.claims.heartbeat(claim_id, self.json_body(raw))
+            return app.claims.fail(claim_id, self.json_body(raw))
         match = re.fullmatch(r"/tickets/([^/]+)(?:/(cancel|retry|events|imprints|lineage))?", route)
         if match:
             ticket_id, action = match.groups()

@@ -9,5 +9,6 @@ requires-python = ">=3.11"
 dependencies = ["av>=14,<17", "imageio-ffmpeg>=0.6,<0.7"]
 [project.scripts]
 reel-loom-server = "reel_loom.server:main"
+reel-loom-worker = "reel_loom.worker:main"
 [tool.setuptools.packages.find]
 include = ["reel_loom*"]

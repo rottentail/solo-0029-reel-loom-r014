@@ -7,19 +7,22 @@ class Artifacts:
     def __init__(self, db, blobs):
         self.db, self.blobs = db, blobs
 
-    def commit_render(self, ticket_id, path, metadata):
+    def commit_render(self, ticket_id, path, metadata, claim):
         with self.db.write_unit() as db:
-            row = db.execute("SELECT state,cancel FROM tickets WHERE id=?", (ticket_id,)).fetchone()
+            row = db.execute("SELECT state,cancel,lease_id FROM tickets WHERE id=?", (ticket_id,)).fetchone()
             require(row is not None, "ticket_missing", "Render ticket disappeared", 409)
             if row["cancel"]:
                 raise RenderCancelled()
             require(row["state"] == "running", "ticket_state", "Only an active render can commit", 409)
+            require(row["lease_id"] is not None and row["lease_id"] == claim,
+                    "lease_lost", "The claim was superseded; a later attempt owns this render", 409)
             blob = self.blobs.put(path, db)
             artifact_id = identifier("artifact")
             db.execute("INSERT INTO artifacts VALUES(?,?,?,?,?,?,?)",
                        (artifact_id, ticket_id, None, "rendition", blob["hash"], canonical(metadata), now()))
-            db.execute("UPDATE tickets SET state='succeeded',progress=1,error=NULL,updated=? WHERE id=?", (now(), ticket_id))
-            self.db.event(db, ticket_id, "succeeded", {"artifact": artifact_id, "blob": blob["hash"]})
+            db.execute("UPDATE tickets SET state='succeeded',progress=1,error=NULL,"
+                       "lease_id=NULL,lease_holder=NULL,lease_expires=NULL,updated=? WHERE id=?", (now(), ticket_id))
+            self.db.event(db, ticket_id, "succeeded", {"artifact": artifact_id, "blob": blob["hash"], "claim": claim})
             return self.get(artifact_id, db)
 
     def add(self, asset_id, kind, path, metadata):
